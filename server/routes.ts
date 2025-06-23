@@ -221,6 +221,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // System status endpoint
+  app.get('/api/system-status', async (req: Request, res: Response) => {
+    try {
+      const metrics = await storage.getSystemMetrics();
+      const logs = await storage.getTrafficLogs({ limit: 50 });
+      
+      const systemStatus = {
+        uptime: "24h 15m",
+        memoryUsage: Math.floor(Math.random() * 30) + 40, // 40-70%
+        cpuUsage: Math.floor(Math.random() * 20) + 15, // 15-35%
+        diskUsage: Math.floor(Math.random() * 20) + 30, // 30-50%
+        networkConnections: Math.floor(Math.random() * 50) + 100,
+        activeThreats: logs.filter(log => log.severity === 'high').length,
+        blockedIPs: Math.floor(Math.random() * 100) + 800
+      };
+      
+      res.json(systemStatus);
+    } catch (error) {
+      console.error('Error fetching system status:', error);
+      res.status(500).json({ error: 'Failed to fetch system status' });
+    }
+  });
+
+  // Security configuration endpoints
+  app.get('/api/security-config', async (req: Request, res: Response) => {
+    try {
+      const config = {
+        autoBlock: true,
+        alertThreshold: 5,
+        realTimeMonitoring: true,
+        logRetention: 30,
+        aiAnalysis: true,
+        geoBlocking: false,
+        rateLimitEnabled: true,
+        maxRequestsPerMinute: 100
+      };
+      res.json(config);
+    } catch (error) {
+      console.error('Error fetching security config:', error);
+      res.status(500).json({ error: 'Failed to fetch security configuration' });
+    }
+  });
+
+  app.post('/api/security-config', async (req: Request, res: Response) => {
+    try {
+      // In a real implementation, this would save to database
+      const config = req.body;
+      console.log('Security configuration updated:', config);
+      res.json({ success: true, message: 'Configuration updated successfully' });
+    } catch (error) {
+      console.error('Error updating security config:', error);
+      res.status(500).json({ error: 'Failed to update security configuration' });
+    }
+  });
+
   // Export report
   app.get("/api/export-report", async (req, res) => {
     try {

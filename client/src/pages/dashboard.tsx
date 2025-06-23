@@ -4,6 +4,7 @@ import OverviewDashboard from "@/components/overview-dashboard";
 import TrafficLogs from "@/components/traffic-logs";
 import AIAnalysis from "@/components/ai-analysis";
 import ThreatIntelligence from "@/components/threat-intelligence";
+import SecuritySettings from "@/components/security-settings";
 import { useRealTimeUpdates } from "@/hooks/use-real-time-updates";
 
 type ActiveSection = 'overview' | 'traffic' | 'analysis' | 'threats' | 'settings';
@@ -23,12 +24,7 @@ export default function Dashboard() {
       case 'threats':
         return <ThreatIntelligence />;
       case 'settings':
-        return (
-          <div className="bg-surface rounded-xl p-6 border border-gray-700">
-            <h3 className="text-xl font-semibold text-white mb-4">System Settings</h3>
-            <p className="text-gray-400">Settings panel coming soon...</p>
-          </div>
-        );
+        return <SecuritySettings />;
       default:
         return <OverviewDashboard />;
     }
