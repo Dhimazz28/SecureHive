@@ -111,6 +111,13 @@ Changelog:
   * Geographic and payload-based threat intelligence
   * Multi-vector attack sequence detection
   * AI quota management with graceful degradation
+- June 23, 2025. Database migration to PostgreSQL completed:
+  * Migrated from in-memory storage to persistent PostgreSQL database
+  * All security data now persists between sessions
+  * Database schema with proper relations established
+  * Traffic logs, attack patterns, and AI analysis results stored persistently
+  * Real-time updates continue with database backend
+  * System operates reliably with rule-based fallback when OpenAI quota exceeded
 ```
 
 ## User Preferences

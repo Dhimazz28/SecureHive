@@ -3,6 +3,7 @@ import Sidebar from "@/components/sidebar";
 import OverviewDashboard from "@/components/overview-dashboard";
 import TrafficLogs from "@/components/traffic-logs";
 import AIAnalysis from "@/components/ai-analysis";
+import ThreatIntelligence from "@/components/threat-intelligence";
 import { useRealTimeUpdates } from "@/hooks/use-real-time-updates";
 
 type ActiveSection = 'overview' | 'traffic' | 'analysis' | 'threats' | 'settings';
@@ -20,7 +21,7 @@ export default function Dashboard() {
       case 'analysis':
         return <AIAnalysis />;
       case 'threats':
-        return <AIAnalysis />; // Threat Intelligence uses same component
+        return <ThreatIntelligence />;
       case 'settings':
         return (
           <div className="bg-surface rounded-xl p-6 border border-gray-700">

@@ -1,9 +1,25 @@
-import type { Express } from "express";
+import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { aiAnalyzer } from "./services/ai-analyzer";
 import { mockDataGenerator } from "./services/mock-data";
 import { insertTrafficLogSchema, insertAttackPatternSchema } from "@shared/schema";
+
+function getCountryName(code: string): string {
+  const countryMap: Record<string, string> = {
+    'CN': 'China',
+    'RU': 'Russia',
+    'US': 'United States',
+    'BR': 'Brazil',
+    'IN': 'India',
+    'DE': 'Germany',
+    'FR': 'France',
+    'UK': 'United Kingdom',
+    'JP': 'Japan',
+    'KR': 'South Korea'
+  };
+  return countryMap[code] || code;
+}
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Initialize mock data
@@ -103,6 +119,105 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(pattern);
     } catch (error) {
       res.status(500).json({ message: "Failed to update attack pattern" });
+    }
+  });
+
+  // Threat intelligence endpoints
+  app.get('/api/threat-intelligence', async (req: Request, res: Response) => {
+    try {
+      const patterns = await storage.getAttackPatterns();
+      const threats = patterns.map(pattern => ({
+        id: pattern.id,
+        threatName: pattern.name,
+        severity: pattern.riskScore >= 8 ? 'critical' : pattern.riskScore >= 6 ? 'high' : pattern.riskScore >= 4 ? 'medium' : 'low',
+        confidence: pattern.confidence,
+        firstSeen: pattern.firstSeen,
+        lastSeen: pattern.lastSeen,
+        attackCount: pattern.occurrences,
+        sourceCountries: ['CN', 'RU', 'US'],
+        targetPorts: '80,443,22',
+        description: pattern.description,
+        mitigationStatus: pattern.status === 'resolved' ? 'resolved' : pattern.status === 'under_review' ? 'contained' : 'active',
+        iocType: 'pattern',
+        tags: [pattern.technique, 'automated-detection']
+      }));
+      res.json(threats);
+    } catch (error) {
+      console.error('Error fetching threat intelligence:', error);
+      res.status(500).json({ error: 'Failed to fetch threat intelligence' });
+    }
+  });
+
+  app.get('/api/threat-trends', async (req: Request, res: Response) => {
+    try {
+      const logs = await storage.getTrafficLogs({ limit: 100 });
+      const trends = [];
+      
+      for (let i = 6; i >= 0; i--) {
+        const date = new Date();
+        date.setDate(date.getDate() - i);
+        const dayLogs = logs.filter(log => 
+          new Date(log.timestamp).toDateString() === date.toDateString()
+        );
+        
+        trends.push({
+          date: date.toISOString().split('T')[0],
+          critical: dayLogs.filter(log => log.severity === 'high').length,
+          high: dayLogs.filter(log => log.severity === 'medium').length,
+          medium: dayLogs.filter(log => log.severity === 'low').length,
+          low: dayLogs.filter(log => log.severity === 'info').length || 5
+        });
+      }
+      
+      res.json(trends);
+    } catch (error) {
+      console.error('Error fetching threat trends:', error);
+      res.status(500).json({ error: 'Failed to fetch threat trends' });
+    }
+  });
+
+  app.get('/api/geographic-threats', async (req: Request, res: Response) => {
+    try {
+      const logs = await storage.getTrafficLogs({ limit: 200 });
+      const countryMap = new Map();
+      
+      logs.forEach(log => {
+        const country = log.country;
+        if (!countryMap.has(country)) {
+          countryMap.set(country, {
+            country: getCountryName(country),
+            code: country,
+            threatCount: 0,
+            severity: 'medium',
+            riskScore: 5
+          });
+        }
+        const data = countryMap.get(country);
+        data.threatCount++;
+        
+        if (data.threatCount >= 20) {
+          data.severity = 'critical';
+          data.riskScore = 9;
+        } else if (data.threatCount >= 10) {
+          data.severity = 'high';
+          data.riskScore = 7;
+        } else if (data.threatCount >= 5) {
+          data.severity = 'medium';
+          data.riskScore = 5;
+        } else {
+          data.severity = 'low';
+          data.riskScore = 3;
+        }
+      });
+      
+      const geoThreats = Array.from(countryMap.values())
+        .sort((a, b) => b.threatCount - a.threatCount)
+        .slice(0, 10);
+      
+      res.json(geoThreats);
+    } catch (error) {
+      console.error('Error fetching geographic threats:', error);
+      res.status(500).json({ error: 'Failed to fetch geographic threats' });
     }
   });
 
