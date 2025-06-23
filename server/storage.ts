@@ -4,6 +4,8 @@ import {
   type AttackPattern, type InsertAttackPattern, type AIAnalysisResult, type InsertAIAnalysisResult,
   type SystemMetrics, type InsertSystemMetrics, type DatasetStats, type InsertDatasetStats
 } from "@shared/schema";
+import { db } from "./db";
+import { eq, desc, and, or, like, count } from "drizzle-orm";
 
 export interface IStorage {
   // User methods
@@ -203,4 +205,212 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+export class DatabaseStorage implements IStorage {
+  async getUser(id: number): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user || undefined;
+  }
+
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user || undefined;
+  }
+
+  async createUser(insertUser: InsertUser): Promise<User> {
+    const [user] = await db
+      .insert(users)
+      .values(insertUser)
+      .returning();
+    return user;
+  }
+
+  async getTrafficLogs(filters?: { severity?: string; attackType?: string; ipAddress?: string; limit?: number; offset?: number }): Promise<TrafficLog[]> {
+    let query = db.select().from(trafficLogs).orderBy(desc(trafficLogs.timestamp));
+    
+    const conditions = [];
+    
+    if (filters?.severity && filters.severity !== 'all') {
+      conditions.push(eq(trafficLogs.severity, filters.severity));
+    }
+    
+    if (filters?.attackType && filters.attackType !== 'all') {
+      const typeMap = {
+        'sql': 'SQL Injection',
+        'xss': 'XSS',
+        'brute': 'Brute Force',
+        'ddos': 'DDoS'
+      };
+      const mappedType = typeMap[filters.attackType as keyof typeof typeMap];
+      if (mappedType) {
+        conditions.push(like(trafficLogs.attackType, `%${mappedType}%`));
+      }
+    }
+    
+    if (filters?.ipAddress) {
+      conditions.push(like(trafficLogs.sourceIP, `%${filters.ipAddress}%`));
+    }
+    
+    if (conditions.length > 0) {
+      query = query.where(and(...conditions));
+    }
+    
+    if (filters?.limit) {
+      query = query.limit(filters.limit);
+    }
+    
+    if (filters?.offset) {
+      query = query.offset(filters.offset);
+    }
+    
+    return await query;
+  }
+
+  async getTrafficLogById(id: number): Promise<TrafficLog | undefined> {
+    const [log] = await db.select().from(trafficLogs).where(eq(trafficLogs.id, id));
+    return log || undefined;
+  }
+
+  async createTrafficLog(insertLog: InsertTrafficLog): Promise<TrafficLog> {
+    const [log] = await db
+      .insert(trafficLogs)
+      .values(insertLog)
+      .returning();
+    return log;
+  }
+
+  async getTrafficLogCount(filters?: { severity?: string; attackType?: string; ipAddress?: string }): Promise<number> {
+    let query = db.select({ count: count() }).from(trafficLogs);
+    
+    const conditions = [];
+    
+    if (filters?.severity && filters.severity !== 'all') {
+      conditions.push(eq(trafficLogs.severity, filters.severity));
+    }
+    
+    if (filters?.attackType && filters.attackType !== 'all') {
+      const typeMap = {
+        'sql': 'SQL Injection',
+        'xss': 'XSS',
+        'brute': 'Brute Force',
+        'ddos': 'DDoS'
+      };
+      const mappedType = typeMap[filters.attackType as keyof typeof typeMap];
+      if (mappedType) {
+        conditions.push(like(trafficLogs.attackType, `%${mappedType}%`));
+      }
+    }
+    
+    if (filters?.ipAddress) {
+      conditions.push(like(trafficLogs.sourceIP, `%${filters.ipAddress}%`));
+    }
+    
+    if (conditions.length > 0) {
+      query = query.where(and(...conditions));
+    }
+    
+    const [result] = await query;
+    return result.count;
+  }
+
+  async getAttackPatterns(): Promise<AttackPattern[]> {
+    return await db.select().from(attackPatterns).orderBy(desc(attackPatterns.lastSeen));
+  }
+
+  async getNewAttackPatterns(): Promise<AttackPattern[]> {
+    return await db.select().from(attackPatterns)
+      .where(
+        or(
+          eq(attackPatterns.status, 'new'),
+          eq(attackPatterns.status, 'under_review')
+        )
+      )
+      .orderBy(desc(attackPatterns.lastSeen));
+  }
+
+  async createAttackPattern(insertPattern: InsertAttackPattern): Promise<AttackPattern> {
+    const [pattern] = await db
+      .insert(attackPatterns)
+      .values(insertPattern)
+      .returning();
+    return pattern;
+  }
+
+  async updateAttackPatternStatus(id: number, status: string): Promise<AttackPattern | undefined> {
+    const [pattern] = await db
+      .update(attackPatterns)
+      .set({ status })
+      .where(eq(attackPatterns.id, id))
+      .returning();
+    return pattern || undefined;
+  }
+
+  async getAIAnalysisResults(limit = 10): Promise<AIAnalysisResult[]> {
+    return await db.select().from(aiAnalysisResults)
+      .orderBy(desc(aiAnalysisResults.timestamp))
+      .limit(limit);
+  }
+
+  async createAIAnalysisResult(insertResult: InsertAIAnalysisResult): Promise<AIAnalysisResult> {
+    const [result] = await db
+      .insert(aiAnalysisResults)
+      .values(insertResult)
+      .returning();
+    return result;
+  }
+
+  async getSystemMetrics(): Promise<SystemMetrics | undefined> {
+    const [metrics] = await db.select().from(systemMetrics)
+      .orderBy(desc(systemMetrics.lastUpdated))
+      .limit(1);
+    return metrics || undefined;
+  }
+
+  async updateSystemMetrics(insertMetrics: InsertSystemMetrics): Promise<SystemMetrics> {
+    // Check if metrics exist
+    const existing = await this.getSystemMetrics();
+    
+    if (existing) {
+      const [metrics] = await db
+        .update(systemMetrics)
+        .set(insertMetrics)
+        .where(eq(systemMetrics.id, existing.id))
+        .returning();
+      return metrics;
+    } else {
+      const [metrics] = await db
+        .insert(systemMetrics)
+        .values(insertMetrics)
+        .returning();
+      return metrics;
+    }
+  }
+
+  async getDatasetStats(): Promise<DatasetStats | undefined> {
+    const [stats] = await db.select().from(datasetStats)
+      .orderBy(desc(datasetStats.lastRetraining))
+      .limit(1);
+    return stats || undefined;
+  }
+
+  async updateDatasetStats(insertStats: InsertDatasetStats): Promise<DatasetStats> {
+    // Check if stats exist
+    const existing = await this.getDatasetStats();
+    
+    if (existing) {
+      const [stats] = await db
+        .update(datasetStats)
+        .set(insertStats)
+        .where(eq(datasetStats.id, existing.id))
+        .returning();
+      return stats;
+    } else {
+      const [stats] = await db
+        .insert(datasetStats)
+        .values(insertStats)
+        .returning();
+      return stats;
+    }
+  }
+}
+
+export const storage = new DatabaseStorage();

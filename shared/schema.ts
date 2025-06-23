@@ -1,5 +1,6 @@
 import { pgTable, text, serial, integer, boolean, timestamp } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
+import { relations } from "drizzle-orm";
 import { z } from "zod";
 
 export const users = pgTable("users", {
@@ -112,3 +113,15 @@ export type InsertSystemMetrics = z.infer<typeof insertSystemMetricsSchema>;
 
 export type DatasetStats = typeof datasetStats.$inferSelect;
 export type InsertDatasetStats = z.infer<typeof insertDatasetStatsSchema>;
+
+// Relations
+export const trafficLogsRelations = relations(trafficLogs, ({ many }) => ({
+  aiAnalysisResults: many(aiAnalysisResults),
+}));
+
+export const aiAnalysisResultsRelations = relations(aiAnalysisResults, ({ one }) => ({
+  trafficLog: one(trafficLogs, {
+    fields: [aiAnalysisResults.trafficLogId],
+    references: [trafficLogs.id],
+  }),
+}));

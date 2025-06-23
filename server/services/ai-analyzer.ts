@@ -425,17 +425,17 @@ export class AIAnalyzer {
     const anomalies: InsertAttackPattern[] = [];
     
     // Find IPs with multiple attack types in short time
-    for (const [ip, logs] of ipGroups) {
+    for (const [ip, logs] of Array.from(ipGroups)) {
       if (logs.length >= 3) {
-        const attackTypes = new Set(logs.map(l => l.attackType));
+        const attackTypes = new Set(logs.map((l: TrafficLog) => l.attackType));
         if (attackTypes.size >= 2) {
           anomalies.push({
             name: 'Multi-Vector Coordinated Attack',
             description: `Coordinated attack from ${ip} using ${attackTypes.size} different attack vectors within short timeframe`,
             confidence: 85,
             occurrences: logs.length,
-            firstSeen: new Date(Math.min(...logs.map(l => l.timestamp.getTime()))),
-            lastSeen: new Date(Math.max(...logs.map(l => l.timestamp.getTime()))),
+            firstSeen: new Date(Math.min(...logs.map((l: TrafficLog) => l.timestamp.getTime()))),
+            lastSeen: new Date(Math.max(...logs.map((l: TrafficLog) => l.timestamp.getTime()))),
             technique: 'Multi-stage attack coordination',
             riskScore: 8,
             status: 'new',
@@ -490,7 +490,7 @@ export class AIAnalyzer {
     });
     
     // Look for high-frequency attacks from unexpected regions
-    for (const [country, count] of countryCounts) {
+    for (const [country, count] of Array.from(countryCounts)) {
       if (count >= 5 && !['CN', 'RU', 'US'].includes(country)) {
         anomalies.push({
           name: 'Geographic Attack Concentration',
