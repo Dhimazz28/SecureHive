@@ -79,6 +79,31 @@ export class MockDataGenerator {
         name: 'Polymorphic XSS Pattern',
         description: 'XSS attempts using dynamic payload generation to evade detection',
         technique: 'DOM-based XSS with obfuscation'
+      },
+      {
+        name: 'Zero-Day Exploit Attempt',
+        description: 'Previously unknown attack vector targeting specific application vulnerabilities',
+        technique: 'Buffer overflow with shellcode injection'
+      },
+      {
+        name: 'AI-Evading Command Injection',
+        description: 'Command injection using obfuscated techniques to bypass ML detection',
+        technique: 'Base64 encoded command execution'
+      },
+      {
+        name: 'Multi-Vector DDoS Campaign',
+        description: 'Coordinated attack using multiple protocols and attack vectors simultaneously',
+        technique: 'Layer 3/4/7 hybrid amplification'
+      },
+      {
+        name: 'Steganographic Data Exfiltration',
+        description: 'Data theft using hidden channels in legitimate-looking traffic',
+        technique: 'DNS tunneling with encrypted payloads'
+      },
+      {
+        name: 'Living-off-the-Land Attack',
+        description: 'Attack using legitimate system tools to avoid detection',
+        technique: 'PowerShell fileless execution'
       }
     ];
 

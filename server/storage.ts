@@ -113,7 +113,12 @@ export class MemStorage implements IStorage {
 
   async createTrafficLog(insertLog: InsertTrafficLog): Promise<TrafficLog> {
     const id = this.currentId++;
-    const log: TrafficLog = { ...insertLog, id };
+    const log: TrafficLog = { 
+      ...insertLog, 
+      id,
+      payload: insertLog.payload ?? null,
+      userAgent: insertLog.userAgent ?? null
+    };
     this.trafficLogs.set(id, log);
     return log;
   }
@@ -136,7 +141,11 @@ export class MemStorage implements IStorage {
 
   async createAttackPattern(insertPattern: InsertAttackPattern): Promise<AttackPattern> {
     const id = this.currentId++;
-    const pattern: AttackPattern = { ...insertPattern, id };
+    const pattern: AttackPattern = { 
+      ...insertPattern, 
+      id,
+      aiGenerated: insertPattern.aiGenerated ?? true
+    };
     this.attackPatterns.set(id, pattern);
     return pattern;
   }
@@ -160,7 +169,11 @@ export class MemStorage implements IStorage {
 
   async createAIAnalysisResult(insertResult: InsertAIAnalysisResult): Promise<AIAnalysisResult> {
     const id = this.currentId++;
-    const result: AIAnalysisResult = { ...insertResult, id };
+    const result: AIAnalysisResult = { 
+      ...insertResult, 
+      id,
+      trafficLogId: insertResult.trafficLogId ?? null
+    };
     this.aiAnalysisResults.set(id, result);
     return result;
   }

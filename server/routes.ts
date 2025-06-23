@@ -227,15 +227,33 @@ function startRealTimeDataGeneration() {
     }
   }, Math.random() * 30000 + 30000); // 30-60 seconds
 
-  // Generate new attack patterns every 10-15 minutes
+  // Generate new attack patterns every 2-3 minutes for demonstration
   setInterval(async () => {
     try {
-      if (Math.random() > 0.7) { // 30% chance
+      if (Math.random() > 0.6) { // 40% chance
         const pattern = mockDataGenerator.generateAttackPattern();
         await storage.createAttackPattern(pattern);
       }
     } catch (error) {
       console.error('Error generating attack patterns:', error);
     }
-  }, Math.random() * 300000 + 600000); // 10-15 minutes
+  }, Math.random() * 60000 + 120000); // 2-3 minutes
+
+  // Perform anomaly detection every 5 minutes
+  setInterval(async () => {
+    try {
+      const recentLogs = await storage.getTrafficLogs({ limit: 20 });
+      const anomalies = await aiAnalyzer.detectAnomalies(recentLogs);
+      
+      for (const anomaly of anomalies) {
+        await storage.createAttackPattern(anomaly);
+      }
+      
+      if (anomalies.length > 0) {
+        console.log(`Detected ${anomalies.length} new attack patterns from anomaly analysis`);
+      }
+    } catch (error) {
+      console.error('Error in anomaly detection:', error);
+    }
+  }, 300000); // 5 minutes
 }
