@@ -225,8 +225,6 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getTrafficLogs(filters?: { severity?: string; attackType?: string; ipAddress?: string; limit?: number; offset?: number }): Promise<TrafficLog[]> {
-    let query = db.select().from(trafficLogs).orderBy(desc(trafficLogs.timestamp));
-    
     const conditions = [];
     
     if (filters?.severity && filters.severity !== 'all') {
@@ -250,19 +248,23 @@ export class DatabaseStorage implements IStorage {
       conditions.push(like(trafficLogs.sourceIP, `%${filters.ipAddress}%`));
     }
     
-    if (conditions.length > 0) {
-      query = query.where(and(...conditions));
-    }
+    // Build the complete query in a single chain to avoid type issues
+    const baseQuery = db.select().from(trafficLogs);
+    const whereQuery = conditions.length > 0 
+      ? baseQuery.where(and(...conditions))
+      : baseQuery;
     
-    if (filters?.limit) {
-      query = query.limit(filters.limit);
-    }
+    const orderedQuery = whereQuery.orderBy(desc(trafficLogs.timestamp));
     
-    if (filters?.offset) {
-      query = query.offset(filters.offset);
-    }
+    const limitedQuery = filters?.limit 
+      ? orderedQuery.limit(filters.limit)
+      : orderedQuery;
+      
+    const finalQuery = filters?.offset 
+      ? limitedQuery.offset(filters.offset)
+      : limitedQuery;
     
-    return await query;
+    return await finalQuery;
   }
 
   async getTrafficLogById(id: number): Promise<TrafficLog | undefined> {
@@ -279,8 +281,6 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getTrafficLogCount(filters?: { severity?: string; attackType?: string; ipAddress?: string }): Promise<number> {
-    let query = db.select({ count: count() }).from(trafficLogs);
-    
     const conditions = [];
     
     if (filters?.severity && filters.severity !== 'all') {
@@ -304,11 +304,13 @@ export class DatabaseStorage implements IStorage {
       conditions.push(like(trafficLogs.sourceIP, `%${filters.ipAddress}%`));
     }
     
-    if (conditions.length > 0) {
-      query = query.where(and(...conditions));
-    }
+    // Build the complete query in a single chain to avoid type issues
+    const baseQuery = db.select({ count: count() }).from(trafficLogs);
+    const finalQuery = conditions.length > 0 
+      ? baseQuery.where(and(...conditions))
+      : baseQuery;
     
-    const [result] = await query;
+    const [result] = await finalQuery;
     return result.count;
   }
 
